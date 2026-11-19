@@ -1,0 +1,49 @@
+{
+  "id": "example_first",
+  "version": 1,
+  "metadata": {
+    "name": "第一個範例關卡",
+    "author": "Parkour Studio",
+    "description": "用來測試關卡讀取的簡單範例。"
+  },
+  "settings": {
+    "width": 1600,
+    "height": 640,
+    "tile_size": 32,
+    "gravity": 980
+  },
+  "objects": [
+    {
+      "id": "spawn_001",
+      "type": "spawn",
+      "x": 64,
+      "y": 480,
+      "width": 32,
+      "height": 64
+    },
+    {
+      "id": "platform_001",
+      "type": "platform",
+      "x": 0,
+      "y": 544,
+      "width": 480,
+      "height": 32
+    },
+    {
+      "id": "spike_001",
+      "type": "spike",
+      "x": 320,
+      "y": 512,
+      "width": 32,
+      "height": 32
+    },
+    {
+      "id": "goal_001",
+      "type": "goal",
+      "x": 1408,
+      "y": 480,
+      "width": 32,
+      "height": 64
+    }
+  ]
+}

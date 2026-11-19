@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}遊戲 - Parkour Studio{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/game.css') }}">{% endblock %}
+{% block content %}
+<h1>遊戲測試區</h1>
+<p>第一版先建立 Canvas 與遊戲畫面；玩家物理和碰撞系統會在後續階段加入。</p>
+<div class="canvas-wrap"><canvas id="game-canvas" width="960" height="540"></canvas></div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/game/game.js') }}"></script>{% endblock %}

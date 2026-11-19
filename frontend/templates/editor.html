@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}關卡編輯器 - Parkour Studio{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/editor.css') }}">{% endblock %}
+{% block content %}
+<div class="editor-heading">
+    <div><h1>關卡編輯器</h1><p>第一版編輯器畫布：可切換格線顯示與吸附設定。</p></div>
+    <div class="toolbar">
+        <label><input id="show-grid" type="checkbox" checked> 顯示格線</label>
+        <label><input id="snap-grid" type="checkbox" checked> 格線吸附</label>
+        <label>格子大小 <input id="grid-size" type="number" min="8" max="128" value="32"></label>
+    </div>
+</div>
+<div class="canvas-wrap editor-canvas-wrap">
+    <canvas id="editor-canvas" width="960" height="540"></canvas>
+</div>
+<p class="hint">目前是編輯器骨架。下一階段會加入選取、放置、移動、縮放及物件屬性。</p>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/editor/editor.js') }}"></script>{% endblock %}

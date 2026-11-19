@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}首頁 - Parkour Studio{% endblock %}
+{% block content %}
+<section class="hero">
+    <p class="eyebrow">2D PLATFORMER CREATOR</p>
+    <h1>創作自己的跑酷關卡</h1>
+    <p>設計地形、放置障礙物，再親自測試你的關卡。</p>
+    <div class="actions">
+        <a class="button" href="/editor">開始編輯</a>
+        <a class="button secondary" href="/levels">瀏覽關卡</a>
+    </div>
+</section>
+<section class="feature-grid">
+    <article class="panel"><h2>遊玩</h2><p>在 2D 橫向世界中移動與跳躍。</p><a href="/game">開啟遊戲頁面 →</a></article>
+    <article class="panel"><h2>創作</h2><p>使用格線吸附或自由放置來設計關卡。</p><a href="/editor">開啟編輯器 →</a></article>
+    <article class="panel"><h2>管理</h2><p>將關卡儲存成獨立 JSON 檔案。</p><a href="/levels">管理關卡 →</a></article>
+</section>
+{% endblock %}

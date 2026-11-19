@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}關卡 - Parkour Studio{% endblock %}
+{% block content %}
+<h1>我的關卡</h1>
+<p>已儲存的關卡會顯示在這裡。</p>
+<div id="level-list" class="level-list"><p>正在載入關卡……</p></div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/levels.js') }}"></script>{% endblock %}
