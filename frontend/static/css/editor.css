@@ -4,3 +4,7 @@
 .toolbar input[type="number"] { width: 66px; padding: 6px; }
 .editor-canvas-wrap { margin-top: 22px; cursor: crosshair; }
 .hint { margin-top: 14px; }
+.editor-controls { display: flex; align-items: end; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+.editor-controls label { display: flex; flex-direction: column; gap: 6px; color: var(--muted); }
+.editor-controls input, .editor-controls select, .toolbar input, .toolbar button { padding: 7px 9px; }
+.toolbar button, .editor-controls button { padding: 8px 12px; cursor: pointer; }

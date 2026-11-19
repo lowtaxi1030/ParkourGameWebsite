@@ -12,29 +12,46 @@ def _level_folder(levels_dir):
 
 def list_levels(levels_dir):
     results = []
-    for file_path in _level_folder(levels_dir).glob("*.json"):
-        try:
-            data = json.loads(file_path.read_text(encoding="utf-8"))
-            metadata = data.get("metadata", {})
-            results.append({
-                "id": file_path.stem,
-                "name": metadata.get("name", file_path.stem),
-                "author": metadata.get("author", "Unknown"),
-            })
-        except (OSError, json.JSONDecodeError):
-            continue
-    return results
+    levels_path = Path(levels_dir)
+    folders = [(levels_path / "examples", "example"), (levels_path / "user", "user")]
+    for folder, source in folders:
+        folder.mkdir(parents=True, exist_ok=True)
+        for file_path in sorted(folder.glob("*.json")):
+            try:
+                data = json.loads(file_path.read_text(encoding="utf-8"))
+                metadata = data.get("metadata", {})
+                results.append({
+                    "id": file_path.stem,
+                    "name": metadata.get("name", file_path.stem),
+                    "author": metadata.get("author", "Unknown"),
+                    "source": source,
+                })
+            except (OSError, json.JSONDecodeError):
+                continue
+    seen = set()
+    unique_results = []
+    for level in results:
+        if level["id"] not in seen:
+            seen.add(level["id"])
+            unique_results.append(level)
+    return unique_results
 
 def load_level(levels_dir, level_id):
     if not SAFE_ID.fullmatch(level_id):
         return None
-    file_path = _level_folder(levels_dir) / f"{level_id}.json"
-    if not file_path.is_file():
-        return None
-    try:
-        return json.loads(file_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
+    levels_path = Path(levels_dir)
+    candidates = [
+        levels_path / "user" / f"{level_id}.json",
+        levels_path / "examples" / f"{level_id}.json",
+    ]
+    for file_path in candidates:
+        if not file_path.is_file():
+            continue
+        try:
+            return json.loads(file_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+    return None
 
 def save_level(levels_dir, data):
     metadata = data.get("metadata")

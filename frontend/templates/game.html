@@ -3,7 +3,11 @@
 {% block styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/game.css') }}">{% endblock %}
 {% block content %}
 <h1>遊戲測試區</h1>
-<p>第一版先建立 Canvas 與遊戲畫面；玩家物理和碰撞系統會在後續階段加入。</p>
+<div class="game-toolbar">
+    <span id="game-status">載入關卡中……</span>
+    <button id="restart-game" type="button">重新開始</button>
+</div>
 <div class="canvas-wrap"><canvas id="game-canvas" width="960" height="540"></canvas></div>
+<p class="hint">操作：A / D 或方向鍵左右移動，W / 上 / Space 跳躍。</p>
 {% endblock %}
 {% block scripts %}<script type="module" src="{{ url_for('static', filename='js/game/game.js') }}"></script>{% endblock %}

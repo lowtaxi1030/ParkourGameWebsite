@@ -18,7 +18,18 @@ async function renderLevels() {
             title.textContent = level.name;
             const author = document.createElement("p");
             author.textContent = `作者：${level.author}`;
-            item.append(title, author);
+            const actions = document.createElement("div");
+            actions.className = "actions";
+            const play = document.createElement("a");
+            play.className = "button";
+            play.href = `/game?level=${encodeURIComponent(level.id)}`;
+            play.textContent = "開始遊玩";
+            const edit = document.createElement("a");
+            edit.className = "button secondary";
+            edit.href = `/editor?level=${encodeURIComponent(level.id)}`;
+            edit.textContent = "編輯";
+            actions.append(play, edit);
+            item.append(title, author, actions);
             list.append(item);
         }
     } catch (error) {

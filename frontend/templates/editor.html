@@ -3,16 +3,33 @@
 {% block styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/editor.css') }}">{% endblock %}
 {% block content %}
 <div class="editor-heading">
-    <div><h1>關卡編輯器</h1><p>第一版編輯器畫布：可切換格線顯示與吸附設定。</p></div>
+    <div><h1>關卡編輯器</h1><p>放置平台、尖刺、出生點與終點。</p></div>
     <div class="toolbar">
         <label><input id="show-grid" type="checkbox" checked> 顯示格線</label>
         <label><input id="snap-grid" type="checkbox" checked> 格線吸附</label>
         <label>格子大小 <input id="grid-size" type="number" min="8" max="128" value="32"></label>
+        <button id="undo" type="button">復原</button>
+        <button id="redo" type="button">重做</button>
+        <button id="save-level" type="button">儲存關卡</button>
     </div>
+</div>
+<div class="editor-controls">
+    <label>工具
+        <select id="active-tool">
+            <option value="select">選取／移動</option>
+            <option value="platform">平台</option>
+            <option value="spike">尖刺</option>
+            <option value="spawn">出生點</option>
+            <option value="goal">終點</option>
+            <option value="erase">橡皮擦</option>
+        </select>
+    </label>
+    <label>關卡名稱 <input id="level-name" type="text" value="未命名關卡"></label>
+    <button id="delete-selected" type="button">刪除選取物件</button>
 </div>
 <div class="canvas-wrap editor-canvas-wrap">
     <canvas id="editor-canvas" width="960" height="540"></canvas>
 </div>
-<p class="hint">目前是編輯器骨架。下一階段會加入選取、放置、移動、縮放及物件屬性。</p>
+<p class="hint" id="editor-status">拖曳可移動物件；點擊畫布可依目前工具放置物件。</p>
 {% endblock %}
 {% block scripts %}<script type="module" src="{{ url_for('static', filename='js/editor/editor.js') }}"></script>{% endblock %}

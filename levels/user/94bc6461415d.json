@@ -1,0 +1,73 @@
+{
+  "id": "94bc6461415d",
+  "version": 1,
+  "metadata": {
+    "name": "測試1",
+    "author": "Player",
+    "description": ""
+  },
+  "settings": {
+    "width": 3200,
+    "height": 960,
+    "tile_size": 32,
+    "gravity": 980.0
+  },
+  "objects": [
+    {
+      "height": 32,
+      "id": "platform_a21a79cf",
+      "type": "platform",
+      "width": 128,
+      "x": 96,
+      "y": 416
+    },
+    {
+      "id": "platform_9260f014",
+      "type": "platform",
+      "x": 320,
+      "y": 384,
+      "width": 128,
+      "height": 32
+    },
+    {
+      "id": "platform_585e120e",
+      "type": "platform",
+      "x": 608,
+      "y": 384,
+      "width": 128,
+      "height": 32
+    },
+    {
+      "id": "platform_2761583d",
+      "type": "platform",
+      "x": 512,
+      "y": 384,
+      "width": 128,
+      "height": 32
+    },
+    {
+      "id": "platform_b484f47e",
+      "type": "platform",
+      "x": 704,
+      "y": 320,
+      "width": 128,
+      "height": 32
+    },
+    {
+      "id": "spawn_5120a2d3",
+      "type": "spawn",
+      "x": 96,
+      "y": 352,
+      "width": 32,
+      "height": 64
+    },
+    {
+      "id": "goal_882f5272",
+      "type": "goal",
+      "x": 800,
+      "y": 256,
+      "width": 32,
+      "height": 64
+    }
+  ]
+}
