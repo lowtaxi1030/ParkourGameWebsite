@@ -7,19 +7,31 @@ export function drawEditor(canvas, state) {
     context.fillStyle = "#101b2b";
     context.fillRect(0, 0, width, height);
 
+    context.save();
+    context.translate(
+        -state.camera.x * state.camera.zoom,
+        -state.camera.y * state.camera.zoom
+    );
+    context.scale(state.camera.zoom, state.camera.zoom);
+
     if (state.showGrid) {
         const size = state.gridSize;
         context.beginPath();
         context.strokeStyle = "rgba(180, 200, 225, 0.13)";
-        context.lineWidth = 1;
+        context.lineWidth = 1 / state.camera.zoom;
 
-        for (let x = 0; x <= width; x += size) {
-            context.moveTo(x + 0.5, 0);
-            context.lineTo(x + 0.5, height);
+        const worldLeft = state.camera.x;
+        const worldTop = state.camera.y;
+        const worldRight = worldLeft + width / state.camera.zoom;
+        const worldBottom = worldTop + height / state.camera.zoom;
+
+        for (let x = Math.floor(worldLeft / size) * size; x <= worldRight; x += size) {
+            context.moveTo(x + 0.5, worldTop);
+            context.lineTo(x + 0.5, worldBottom);
         }
-        for (let y = 0; y <= height; y += size) {
-            context.moveTo(0, y + 0.5);
-            context.lineTo(width, y + 0.5);
+        for (let y = Math.floor(worldTop / size) * size; y <= worldBottom; y += size) {
+            context.moveTo(worldLeft, y + 0.5);
+            context.lineTo(worldRight, y + 0.5);
         }
         context.stroke();
     }
@@ -44,8 +56,27 @@ export function drawEditor(canvas, state) {
             context.strokeStyle = "#ffffff";
             context.lineWidth = 3;
             context.strokeRect(object.x + 1, object.y + 1, object.width - 2, object.height - 2);
+            context.fillStyle = "#ffffff";
+            const handles = [
+                [object.x, object.y],
+                [object.x + object.width / 2, object.y],
+                [object.x + object.width, object.y],
+                [object.x, object.y + object.height / 2],
+                [object.x + object.width, object.y + object.height / 2],
+                [object.x, object.y + object.height],
+                [object.x + object.width / 2, object.y + object.height],
+                [object.x + object.width, object.y + object.height],
+            ];
+            for (const [x, y] of handles) {
+                const handleSize = 12 / state.camera.zoom;
+                context.fillRect(x - handleSize / 2, y - handleSize / 2, handleSize, handleSize);
+                context.strokeStyle = "#0f172a";
+                context.lineWidth = 2 / state.camera.zoom;
+                context.strokeRect(x - handleSize / 2, y - handleSize / 2, handleSize, handleSize);
+            }
         }
     }
+    context.restore();
 
     context.fillStyle = "#aab6c7";
     context.font = "14px system-ui";

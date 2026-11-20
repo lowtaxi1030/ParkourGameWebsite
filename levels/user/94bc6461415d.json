@@ -22,52 +22,108 @@
       "y": 416
     },
     {
+      "height": 32,
       "id": "platform_9260f014",
       "type": "platform",
-      "x": 320,
-      "y": 384,
       "width": 128,
-      "height": 32
+      "x": 320,
+      "y": 384
     },
     {
+      "height": 32,
       "id": "platform_585e120e",
       "type": "platform",
-      "x": 608,
-      "y": 384,
       "width": 128,
-      "height": 32
+      "x": 608,
+      "y": 384
     },
     {
+      "height": 32,
       "id": "platform_2761583d",
       "type": "platform",
-      "x": 512,
-      "y": 384,
       "width": 128,
-      "height": 32
+      "x": 512,
+      "y": 384
     },
     {
+      "height": 32,
       "id": "platform_b484f47e",
       "type": "platform",
-      "x": 704,
-      "y": 320,
       "width": 128,
-      "height": 32
+      "x": 832,
+      "y": 352
     },
     {
+      "height": 64,
       "id": "spawn_5120a2d3",
       "type": "spawn",
-      "x": 96,
-      "y": 352,
       "width": 32,
-      "height": 64
+      "x": 96,
+      "y": 352
     },
     {
-      "id": "goal_882f5272",
-      "type": "goal",
-      "x": 800,
-      "y": 256,
+      "height": 32,
+      "id": "spike_a8c1882c",
+      "type": "spike",
       "width": 32,
-      "height": 64
+      "x": 320,
+      "y": 352
+    },
+    {
+      "height": 32,
+      "id": "spike_293b6a81",
+      "type": "spike",
+      "width": 32,
+      "x": 576,
+      "y": 352
+    },
+    {
+      "height": 128,
+      "id": "platform_a587521b",
+      "type": "platform",
+      "width": 32,
+      "x": 992,
+      "y": 224
+    },
+    {
+      "height": 128,
+      "id": "platform_ceeede6e",
+      "type": "platform",
+      "width": 32,
+      "x": 1024,
+      "y": 96
+    },
+    {
+      "height": 32,
+      "id": "platform_c9e2e25b",
+      "type": "platform",
+      "width": 128,
+      "x": 1472,
+      "y": 256
+    },
+    {
+      "height": 32,
+      "id": "platform_c47d0c56",
+      "type": "platform",
+      "width": 128,
+      "x": 1024,
+      "y": 416
+    },
+    {
+      "height": 32,
+      "id": "platform_f4217797",
+      "type": "platform",
+      "width": 128,
+      "x": 1088,
+      "y": 352
+    },
+    {
+      "height": 96,
+      "id": "platform_42bdc3db",
+      "type": "platform",
+      "width": 32,
+      "x": 1056,
+      "y": 0
     }
   ]
 }
