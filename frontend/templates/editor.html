@@ -2,56 +2,116 @@
 {% block title %}關卡編輯器 - Parkour Studio{% endblock %}
 {% block styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/editor.css') }}">{% endblock %}
 {% block content %}
-<div class="editor-heading">
-    <div><h1>關卡編輯器</h1><p>放置平台、尖刺、出生點與終點。</p></div>
-    <div class="toolbar">
-        <label><input id="show-grid" type="checkbox" checked> 顯示格線</label>
-        <label><input id="snap-grid" type="checkbox" checked> 格線吸附</label>
-        <label>格子大小 <input id="grid-size" type="number" min="8" max="128" value="32"></label>
-        <button id="undo" type="button">復原</button>
-        <button id="redo" type="button">重做</button>
-        <button id="save-level" type="button">儲存關卡</button>
-        <button id="test-level" type="button">測試目前關卡</button>
-        <button id="export-level" type="button">匯出 JSON</button>
-        <button id="import-level" type="button">匯入 JSON</button>
-        <input id="import-level-file" type="file" accept=".json,application/json" hidden>
-        <button id="zoom-out" type="button" aria-label="縮小檢視">−</button>
-        <span id="zoom-value">100%</span>
-        <button id="zoom-in" type="button" aria-label="放大檢視">＋</button>
-        <button id="reset-camera" type="button">重置檢視</button>
-    </div>
-</div>
-<div class="editor-controls">
-    <label>工具
-        <select id="active-tool">
-            <option value="select">選取／移動</option>
-            <option value="platform">平台</option>
-            <option value="spike">尖刺</option>
-            <option value="spawn">出生點</option>
-            <option value="goal">終點</option>
-            <option value="erase">橡皮擦</option>
-        </select>
-    </label>
-    <label>關卡名稱 <input id="level-name" type="text" value="未命名關卡"></label>
-    <button id="delete-selected" type="button">刪除選取物件</button>
-</div>
-<div class="editor-workspace">
-    <div class="canvas-wrap editor-canvas-wrap">
-        <canvas id="editor-canvas" width="960" height="540"></canvas>
-    </div>
-    <aside class="object-properties" aria-label="物件屬性">
-        <h2>物件屬性</h2>
-        <p id="property-empty">請先選取一個物件。</p>
-        <div id="property-fields" hidden>
-            <label>物件類型 <input id="property-type" type="text" readonly></label>
-            <label>X 位置 <input id="property-x" type="number" min="0" step="1"></label>
-            <label>Y 位置 <input id="property-y" type="number" min="0" step="1"></label>
-            <label>寬度 <input id="property-width" type="number" min="8" step="1"></label>
-            <label>高度 <input id="property-height" type="number" min="8" step="1"></label>
-            <button id="apply-properties" type="button">套用變更</button>
+<div class="editor-page">
+    <section class="editor-topbar">
+        <div class="editor-heading">
+            <div>
+                <div class="editor-eyebrow"><span class="eyebrow-dot"></span> PARKOUR STUDIO / LEVEL DESIGN</div>
+                <h1>關卡編輯器</h1>
+                <p>打造你的跑酷關卡。放置物件、調整位置，完成後即可測試。</p>
+            </div>
+            <div class="editor-main-actions">
+                <button id="save-level" class="btn btn-save" type="button"><span class="btn-icon">↧</span> 儲存關卡</button>
+                <button id="test-level" class="btn btn-test" type="button"><span class="btn-icon">▶</span> 測試關卡</button>
+            </div>
         </div>
-    </aside>
+        <div class="editor-file-actions">
+            <span class="action-caption">關卡檔案</span>
+            <button id="import-level" class="btn btn-quiet" type="button"><span class="btn-icon">↑</span> 匯入 JSON</button>
+            <button id="export-level" class="btn btn-quiet" type="button"><span class="btn-icon">↓</span> 匯出 JSON</button>
+            <input id="import-level-file" type="file" accept=".json,application/json" hidden>
+        </div>
+    </section>
+
+    <section class="editor-settings panel-card" aria-label="關卡設定">
+        <div class="section-heading"><span class="section-mark mark-purple"></span><h2>關卡設定</h2></div>
+        <label class="field-group level-name-field">
+            <span>關卡名稱</span>
+            <input id="level-name" type="text" value="未命名關卡" maxlength="80" placeholder="輸入關卡名稱">
+        </label>
+        <div class="setting-divider"></div>
+        <label class="toggle-field"><input id="show-grid" type="checkbox" checked><span class="toggle-ui"></span><span>顯示格線</span></label>
+        <label class="toggle-field"><input id="snap-grid" type="checkbox" checked><span class="toggle-ui"></span><span>格線吸附</span></label>
+        <label class="field-group grid-size-field"><span>格子大小</span><span class="input-with-unit"><input id="grid-size" type="number" min="8" max="128" value="32"><small>px</small></span></label>
+    </section>
+
+    <section class="level-world-settings panel-card" aria-label="遊戲整體數據">
+        <div class="section-heading"><span class="section-mark mark-purple"></span><h2>遊戲整體數據</h2><span class="section-note">調整關卡大小與遊戲物理設定</span></div>
+        <div class="world-settings-grid">
+            <label class="field-group"><span>關卡寬度</span><span class="input-with-unit"><input id="level-width" type="number" min="320" max="100000" step="1"><small>px</small></span></label>
+            <label class="field-group"><span>關卡高度</span><span class="input-with-unit"><input id="level-height" type="number" min="320" max="20000" step="1"><small>px</small></span></label>
+            <label class="field-group"><span>基本格子大小</span><span class="input-with-unit"><input id="level-tile-size" type="number" min="8" max="256" step="1"><small>px</small></span></label>
+            <label class="field-group"><span>重力</span><span class="input-with-unit"><input id="level-gravity" type="number" min="0" max="5000" step="10"><small>px/s²</small></span></label>
+            <label class="field-group"><span>角色移動速度</span><span class="input-with-unit"><input id="level-move-speed" type="number" min="50" max="1000" step="10"><small>px/s</small></span></label>
+            <label class="field-group"><span>角色跳躍力度</span><span class="input-with-unit"><input id="level-jump-strength" type="number" min="100" max="1500" step="10"><small>px/s</small></span></label>
+            <button id="apply-level-settings" class="btn btn-apply world-settings-apply" type="button">套用遊戲設定</button>
+        </div>
+        <p class="world-settings-note">縮小關卡尺寸前，請確認所有物件都還在新範圍內。重力越大，角色下落速度越快。</p>
+    </section>
+
+    <section class="editor-tools panel-card" aria-label="編輯工具">
+        <div class="section-heading"><span class="section-mark mark-cyan"></span><h2>編輯工具</h2><span class="section-note">選擇工具後，在畫布上操作</span></div>
+        <label class="tool-select-wrap" for="active-tool"><span>目前工具</span>
+            <select id="active-tool">
+                <option value="select">⌖　選取／移動</option>
+                <option value="platform">▰　平台</option>
+                <option value="spike">▲　尖刺</option>
+                <option value="spawn">◆　出生點</option>
+                <option value="goal">★　終點</option>
+                <option value="erase">⌫　橡皮擦</option>
+            </select>
+        </label>
+        <div class="tool-divider"></div>
+        <div class="tool-actions">
+            <button id="undo" class="btn btn-tool" type="button" title="復原上一步"><span>↶</span> 復原</button>
+            <button id="redo" class="btn btn-tool" type="button" title="重做上一步"><span>↷</span> 重做</button>
+            <button id="delete-selected" class="btn btn-danger" type="button" title="刪除目前選取的物件"><span>⌫</span> 刪除選取物件</button>
+        </div>
+    </section>
+
+    <section class="editor-workspace" aria-label="關卡編輯區">
+        <div class="canvas-panel panel-card">
+            <div class="canvas-panel-heading">
+                <div><div class="section-heading"><span class="section-mark mark-green"></span><h2>畫布</h2></div><p>在這裡建造你的關卡</p></div>
+                <div class="zoom-controls" aria-label="畫布縮放">
+                    <button id="zoom-out" class="zoom-button" type="button" aria-label="縮小檢視">−</button>
+                    <span id="zoom-value">100%</span>
+                    <button id="zoom-in" class="zoom-button" type="button" aria-label="放大檢視">＋</button>
+                    <button id="reset-camera" class="btn btn-quiet btn-reset" type="button">重置檢視</button>
+                </div>
+            </div>
+            <div class="canvas-wrap editor-canvas-wrap">
+                <canvas id="editor-canvas" width="960" height="540"></canvas>
+            </div>
+            <div class="canvas-footer"><span class="canvas-live-dot"></span> 編輯畫布 <span class="canvas-footer-spacer"></span><span>960 × 540</span></div>
+        </div>
+
+        <aside class="object-properties panel-card" aria-label="物件屬性">
+            <div class="section-heading"><span class="section-mark mark-orange"></span><h2>物件屬性</h2></div>
+            <div id="property-empty" class="property-empty-state">
+                <div class="empty-icon">⌖</div>
+                <strong>尚未選取物件</strong>
+                <p>在畫布上點選物件，即可調整它的位置與大小。</p>
+            </div>
+            <div id="property-fields" hidden>
+                <label class="field-group"><span>物件類型</span><input id="property-type" type="text" readonly></label>
+                <label class="field-group property-color-field"><span>物件顏色</span><span class="color-input-wrap"><input id="property-color" type="color" value="#60a5fa"><span id="property-color-value">#60A5FA</span></span></label>
+                <div class="property-grid">
+                    <label class="field-group"><span>X 位置</span><input id="property-x" type="number" min="0" step="1"></label>
+                    <label class="field-group"><span>Y 位置</span><input id="property-y" type="number" min="0" step="1"></label>
+                    <label class="field-group"><span>寬度</span><input id="property-width" type="number" min="8" step="1"></label>
+                    <label class="field-group"><span>高度</span><input id="property-height" type="number" min="8" step="1"></label>
+                </div>
+                <button id="apply-properties" class="btn btn-apply" type="button">套用變更</button>
+            </div>
+            <div class="property-tip"><span>i</span><p>也可以使用方向鍵微調選取物件，按住 Shift 可加快移動。</p></div>
+        </aside>
+    </section>
+
+    <div class="editor-bottom-row">
+        <p class="hint editor-status" id="editor-status" role="status" aria-live="polite">編輯內容會自動保存到這台裝置；按「儲存關卡」可另外保存到關卡列表。</p>
+        <div class="keyboard-hints"><span><kbd>Space</kbd> 平移</span><span><kbd>滾輪</kbd> 縮放</span><span><kbd>方向鍵</kbd> 微調</span><span><kbd>Delete</kbd> 刪除物件</span></div>
+    </div>
 </div>
-<p class="hint" id="editor-status">拖曳物件可移動；選取工具下拖曳空白處可平移畫面；滾輪縮放，也可按住空白鍵、中鍵或右鍵拖曳平移。</p>
 {% endblock %}
 {% block scripts %}<script type="module" src="{{ url_for('static', filename='js/editor/editor.js') }}"></script>{% endblock %}

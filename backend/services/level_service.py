@@ -6,6 +6,13 @@ from uuid import uuid4
 
 SAFE_ID = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
 ALLOWED_OBJECT_TYPES = {"platform", "spike", "spawn", "goal"}
+DEFAULT_OBJECT_COLORS = {
+    "platform": "#60a5fa",
+    "spike": "#fb7185",
+    "spawn": "#a3e635",
+    "goal": "#facc15",
+}
+SAFE_COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
 def _level_folder(levels_dir):
@@ -50,6 +57,8 @@ def validate_level(data):
     height = int(_number(settings.get("height", 960), "關卡高度", 320, 20000))
     tile_size = int(_number(settings.get("tile_size", 32), "格子大小", 8, 256))
     gravity = _number(settings.get("gravity", 980), "重力", 0, 5000)
+    move_speed = _number(settings.get("move_speed", 300), "角色移動速度", 50, 1000)
+    jump_strength = _number(settings.get("jump_strength", 520), "角色跳躍力度", 100, 1500)
 
     normalized_objects = []
     seen_ids = set()
@@ -74,9 +83,14 @@ def validate_level(data):
         if x + object_width > width or y + object_height > height:
             raise ValueError(f"{label}超出關卡範圍。")
 
+        color = item.get("color", DEFAULT_OBJECT_COLORS[object_type])
+        if not isinstance(color, str) or not SAFE_COLOR.fullmatch(color):
+            raise ValueError(f"{label}的顏色格式不正確，請使用 #RRGGBB。")
+
         normalized_objects.append({
             "id": object_id,
             "type": object_type,
+            "color": color.lower(),
             "x": x,
             "y": y,
             "width": object_width,
@@ -103,6 +117,8 @@ def validate_level(data):
             "height": height,
             "tile_size": tile_size,
             "gravity": gravity,
+            "move_speed": move_speed,
+            "jump_strength": jump_strength,
         },
         "objects": normalized_objects,
     }

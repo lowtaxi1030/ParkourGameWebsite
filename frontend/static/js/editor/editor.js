@@ -33,6 +33,17 @@ const propertyInputs = {
     height: document.querySelector("#property-height"),
 };
 const applyPropertiesButton = document.querySelector("#apply-properties");
+const levelSettingInputs = {
+    width: document.querySelector("#level-width"),
+    height: document.querySelector("#level-height"),
+    tile_size: document.querySelector("#level-tile-size"),
+    gravity: document.querySelector("#level-gravity"),
+    move_speed: document.querySelector("#level-move-speed"),
+    jump_strength: document.querySelector("#level-jump-strength"),
+};
+const applyLevelSettingsButton = document.querySelector("#apply-level-settings");
+const propertyColorInput = document.querySelector("#property-color");
+const propertyColorValue = document.querySelector("#property-color-value");
 
 const editorState = {
     level: createEmptyLevel(),
@@ -46,6 +57,7 @@ const editorState = {
 
 const history = [];
 const future = [];
+let autosaveTimer = null;
 let drag = null;
 let hoverHandle = null;
 let panDrag = null;
@@ -106,16 +118,30 @@ function cloneObject(object) {
 }
 
 function getObjectSize(type) {
-    if (type === "platform") return { width: 128, height: 32 };
-    if (type === "spike") return { width: 32, height: 32 };
-    return { width: 32, height: 64 };
+    const tileSize = editorState.level.settings.tile_size || 32;
+    const widthLimit = editorState.level.settings.width;
+    const heightLimit = editorState.level.settings.height;
+    let width = type === "platform" ? tileSize * 4 : tileSize;
+    let height = type === "spawn" || type === "goal" ? tileSize * 2 : tileSize;
+    return {
+        width: Math.min(width, widthLimit),
+        height: Math.min(height, heightLimit),
+    };
 }
+
+const DEFAULT_OBJECT_COLORS = {
+    platform: "#60a5fa",
+    spike: "#fb7185",
+    spawn: "#a3e635",
+    goal: "#facc15",
+};
 
 function createObject(type, x, y) {
     const size = getObjectSize(type);
     return {
         id: `${type}_${crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : Date.now().toString(36)}`,
         type,
+        color: DEFAULT_OBJECT_COLORS[type] || "#ffffff",
         x: Math.max(0, Math.min(x, editorState.level.settings.width - size.width)),
         y: Math.max(0, Math.min(y, editorState.level.settings.height - size.height)),
         ...size,
@@ -138,7 +164,57 @@ function hitObject(point) {
     return null;
 }
 
+function draftStorageKey(level = editorState.level) {
+    return `parkour_editor_autosave:${level.id || "draft"}`;
+}
+
+function saveDraftNow() {
+    try {
+        editorState.level.metadata.name = levelNameInput.value.trim() || "未命名關卡";
+        localStorage.setItem(draftStorageKey(), JSON.stringify(editorState.level));
+        return true;
+    } catch (error) {
+        console.warn("無法自動保存關卡草稿：", error);
+        return false;
+    }
+}
+
+function scheduleDraftSave() {
+    if (autosaveTimer !== null) window.clearTimeout(autosaveTimer);
+    autosaveTimer = window.setTimeout(() => {
+        autosaveTimer = null;
+        if (saveDraftNow()) {
+            status.textContent = "已自動保存到這台裝置；重新整理後仍可繼續編輯。";
+        } else {
+            status.textContent = "自動保存失敗，請使用「儲存關卡」或匯出 JSON 備份。";
+        }
+    }, 350);
+}
+
+function restoreLocalDraft(levelId = null) {
+    const key = `parkour_editor_autosave:${levelId || "draft"}`;
+    try {
+        const serialized = localStorage.getItem(key);
+        if (!serialized) return false;
+        const draft = validateImportedLevel(JSON.parse(serialized));
+        editorState.level = draft;
+        levelNameInput.value = draft.metadata.name || "未命名關卡";
+        status.textContent = "已還原上次自動保存的編輯內容。";
+        return true;
+    } catch (error) {
+        console.warn("自動保存草稿無法讀取：", error);
+        localStorage.removeItem(key);
+        return false;
+    }
+}
+
+window.addEventListener("pagehide", () => {
+    if (autosaveTimer !== null) window.clearTimeout(autosaveTimer);
+    saveDraftNow();
+});
+
 function updateAndDraw() {
+    scheduleDraftSave();
     editorState.showGrid = showGridInput.checked;
     editorState.snapToGrid = snapGridInput.checked;
     editorState.gridSize = Math.max(8, Math.min(128, Number(gridSizeInput.value) || 32));
@@ -146,6 +222,7 @@ function updateAndDraw() {
     if (zoomValue) zoomValue.textContent = `${Math.round(editorState.camera.zoom * 100)}%`;
     drawEditor(canvas, editorState);
     updatePropertyPanel();
+    updateLevelSettingsPanel();
 }
 
 function getSelectedObject() {
@@ -163,6 +240,17 @@ function updatePropertyPanel() {
     for (const key of ["type", "x", "y", "width", "height"]) {
         propertyInputs[key].value = object[key];
     }
+    propertyColorInput.value = /^#[0-9a-fA-F]{6}$/.test(object.color || "")
+        ? object.color : (DEFAULT_OBJECT_COLORS[object.type] || "#ffffff");
+    propertyColorValue.textContent = propertyColorInput.value.toUpperCase();
+}
+
+function updateLevelSettingsPanel() {
+    const defaults = { width: 3200, height: 960, tile_size: 32, gravity: 980, move_speed: 300, jump_strength: 520 };
+    for (const key of Object.keys(levelSettingInputs)) {
+        editorState.level.settings[key] ??= defaults[key];
+        levelSettingInputs[key].value = editorState.level.settings[key];
+    }
 }
 
 function validateImportedLevel(level) {
@@ -174,7 +262,9 @@ function validateImportedLevel(level) {
         !Array.isArray(level.objects)) {
         throw new Error("關卡必須包含 metadata、settings 與 objects。");
     }
-    for (const key of ["width", "height", "tile_size", "gravity"]) {
+    level.settings.move_speed ??= 300;
+    level.settings.jump_strength ??= 520;
+    for (const key of ["width", "height", "tile_size", "gravity", "move_speed", "jump_strength"]) {
         if (!Number.isFinite(Number(level.settings[key]))) {
             throw new Error(`設定值 ${key} 必須是有效數字。`);
         }
@@ -182,7 +272,9 @@ function validateImportedLevel(level) {
     if (Number(level.settings.width) < 320 || Number(level.settings.width) > 100000 ||
         Number(level.settings.height) < 320 || Number(level.settings.height) > 20000 ||
         Number(level.settings.tile_size) < 8 || Number(level.settings.tile_size) > 256 ||
-        Number(level.settings.gravity) < 0 || Number(level.settings.gravity) > 5000) {
+        Number(level.settings.gravity) < 0 || Number(level.settings.gravity) > 5000 ||
+        Number(level.settings.move_speed) < 50 || Number(level.settings.move_speed) > 1000 ||
+        Number(level.settings.jump_strength) < 100 || Number(level.settings.jump_strength) > 1500) {
         throw new Error("關卡設定超出允許範圍。");
     }
     const ids = new Set();
@@ -195,6 +287,10 @@ function validateImportedLevel(level) {
             throw new Error("每個物件都必須有不重複的 ID。");
         }
         ids.add(object.id);
+        if (object.color !== undefined && !/^#[0-9a-fA-F]{6}$/.test(object.color)) {
+            throw new Error(`物件 ${object.id} 的顏色必須是六位數 HEX 色碼。`);
+        }
+        object.color = object.color || DEFAULT_OBJECT_COLORS[object.type];
         for (const key of ["x", "y", "width", "height"]) {
             if (!Number.isFinite(Number(object[key]))) {
                 throw new Error(`物件 ${object.id} 的 ${key} 不是有效數字。`);
@@ -425,7 +521,7 @@ redoButton.addEventListener("click", () => {
     restore(future.pop());
 });
 
-deleteButton.addEventListener("click", () => {
+function deleteSelectedObjects() {
     if (editorState.selectedObjectIds.length === 0) return;
     recordChange();
     editorState.level.objects = editorState.level.objects.filter(
@@ -434,14 +530,29 @@ deleteButton.addEventListener("click", () => {
     editorState.selectedObjectIds = [];
     status.textContent = "已刪除選取物件。";
     updateAndDraw();
+}
+
+deleteButton.addEventListener("click", deleteSelectedObjects);
+
+window.addEventListener("keydown", (event) => {
+    if (event.key !== "Delete") return;
+    const target = event.target;
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement || target?.isContentEditable) return;
+    if (editorState.selectedObjectIds.length === 0) return;
+    event.preventDefault();
+    deleteSelectedObjects();
 });
 
 saveButton.addEventListener("click", async () => {
     editorState.level.metadata.name = levelNameInput.value.trim() || "未命名關卡";
     try {
+        const previousDraftKey = draftStorageKey();
         const saved = await saveLevel(editorState.level);
         editorState.level = saved;
-        status.textContent = `已儲存關卡：${saved.id}`;
+        if (previousDraftKey !== draftStorageKey()) localStorage.removeItem(previousDraftKey);
+        saveDraftNow();
+        status.textContent = `已儲存關卡：${saved.id}（同時保留本機自動保存）`;
         history.push(snapshot());
     } catch (error) {
         status.textContent = `儲存失敗：${error.message}`;
@@ -451,6 +562,7 @@ saveButton.addEventListener("click", async () => {
 levelNameInput.addEventListener("change", () => {
     recordChange();
     editorState.level.metadata.name = levelNameInput.value.trim() || "未命名關卡";
+    scheduleDraftSave();
 });
 
 window.addEventListener("keydown", (event) => {
@@ -496,6 +608,10 @@ window.addEventListener("keydown", (event) => {
     updateAndDraw();
 });
 
+propertyColorInput.addEventListener("input", () => {
+    propertyColorValue.textContent = propertyColorInput.value.toUpperCase();
+});
+
 applyPropertiesButton.addEventListener("click", () => {
     const object = getSelectedObject();
     if (!object) return;
@@ -514,9 +630,46 @@ applyPropertiesButton.addEventListener("click", () => {
         status.textContent = "物件不可超出關卡範圍，寬高至少要 8。";
         return;
     }
+    const color = propertyColorInput.value;
+    if (!/^#[0-9a-fA-F]{6}$/.test(color)) {
+        status.textContent = "請選擇有效的物件顏色。";
+        return;
+    }
     recordChange();
-    Object.assign(object, values);
-    status.textContent = "已更新物件屬性。";
+    Object.assign(object, values, { color });
+    status.textContent = "已更新物件位置、大小與顏色。";
+    updateAndDraw();
+});
+
+applyLevelSettingsButton.addEventListener("click", () => {
+    const values = {
+        width: Number(levelSettingInputs.width.value),
+        height: Number(levelSettingInputs.height.value),
+        tile_size: Number(levelSettingInputs.tile_size.value),
+        gravity: Number(levelSettingInputs.gravity.value),
+        move_speed: Number(levelSettingInputs.move_speed.value),
+        jump_strength: Number(levelSettingInputs.jump_strength.value),
+    };
+    if (!Number.isInteger(values.width) || values.width < 320 || values.width > 100000 ||
+        !Number.isInteger(values.height) || values.height < 320 || values.height > 20000 ||
+        !Number.isInteger(values.tile_size) || values.tile_size < 8 || values.tile_size > 256 ||
+        !Number.isFinite(values.gravity) || values.gravity < 0 || values.gravity > 5000 ||
+        !Number.isFinite(values.move_speed) || values.move_speed < 50 || values.move_speed > 1000 ||
+        !Number.isFinite(values.jump_strength) || values.jump_strength < 100 || values.jump_strength > 1500) {
+        status.textContent = "設定超出範圍：寬 320–100000、高 320–20000、格子 8–256、重力 0–5000、移動速度 50–1000、跳躍力度 100–1500。";
+        updateLevelSettingsPanel();
+        return;
+    }
+    const outsideObject = editorState.level.objects.find((object) =>
+        object.x + object.width > values.width || object.y + object.height > values.height
+    );
+    if (outsideObject) {
+        status.textContent = `無法套用：物件 ${outsideObject.id} 會超出新的關卡範圍。`;
+        return;
+    }
+    recordChange();
+    editorState.level.settings = { ...editorState.level.settings, ...values };
+    status.textContent = "已更新遊戲整體數據。";
     updateAndDraw();
 });
 
@@ -567,16 +720,19 @@ testButton.addEventListener("click", () => {
 
 async function loadInitialLevel() {
     const levelId = new URLSearchParams(window.location.search).get("level");
-    if (!levelId) {
-        updateAndDraw();
-        return;
-    }
-    try {
-        editorState.level = await getLevel(levelId);
+    if (levelId) {
+        try {
+            editorState.level = await getLevel(levelId);
+            levelNameInput.value = editorState.level.metadata.name;
+            restoreLocalDraft(levelId);
+            status.textContent = "已載入關卡；若有較新的本機草稿，已優先還原。";
+        } catch (error) {
+            status.textContent = `載入失敗：${error.message}`;
+            if (!restoreLocalDraft(levelId)) restoreLocalDraft();
+        }
+    } else if (!restoreLocalDraft()) {
         levelNameInput.value = editorState.level.metadata.name;
-        status.textContent = `已載入關卡：${editorState.level.metadata.name}`;
-    } catch (error) {
-        status.textContent = `載入失敗：${error.message}`;
+        status.textContent = "新關卡已準備好。編輯內容會自動保存到這台裝置。";
     }
     updateAndDraw();
 }

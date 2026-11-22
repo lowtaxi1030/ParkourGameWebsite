@@ -1,3 +1,11 @@
+function shadeColor(hex, factor = 0.48) {
+    const value = Number.parseInt(hex.slice(1), 16);
+    const red = Math.round(((value >> 16) & 255) * factor);
+    const green = Math.round(((value >> 8) & 255) * factor);
+    const blue = Math.round((value & 255) * factor);
+    return `#${[red, green, blue].map((part) => part.toString(16).padStart(2, "0")).join("")}`;
+}
+
 export function drawEditor(canvas, state) {
     const context = canvas.getContext("2d");
     const width = canvas.width;
@@ -38,13 +46,16 @@ export function drawEditor(canvas, state) {
 
     for (const object of state.level.objects) {
         const selected = state.selectedObjectIds.includes(object.id);
-        if (object.type === "platform") context.fillStyle = "#60a5fa";
-        else if (object.type === "spike") context.fillStyle = "#fb7185";
-        else if (object.type === "spawn") context.fillStyle = "#a3e635";
-        else context.fillStyle = "#facc15";
+        const defaultColors = {
+            platform: "#60a5fa",
+            spike: "#fb7185",
+            spawn: "#a3e635",
+            goal: "#facc15",
+        };
+        context.fillStyle = object.color || defaultColors[object.type] || "#ffffff";
         context.fillRect(object.x, object.y, object.width, object.height);
         if (object.type === "spike") {
-            context.fillStyle = "#7f1d1d";
+            context.fillStyle = shadeColor(object.color || "#fb7185");
             context.beginPath();
             context.moveTo(object.x, object.y + object.height);
             context.lineTo(object.x + object.width / 2, object.y);

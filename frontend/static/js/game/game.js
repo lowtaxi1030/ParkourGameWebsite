@@ -13,6 +13,14 @@ let cameraX = 0;
 let completed = false;
 let lastTime = performance.now();
 
+function shadeColor(hex, factor = 0.48) {
+    const value = Number.parseInt(hex.slice(1), 16);
+    const red = Math.round(((value >> 16) & 255) * factor);
+    const green = Math.round(((value >> 8) & 255) * factor);
+    const blue = Math.round((value & 255) * factor);
+    return `#${[red, green, blue].map((part) => part.toString(16).padStart(2, "0")).join("")}`;
+}
+
 function overlaps(a, b) {
     return a.x < b.x + b.width &&
         a.x + a.width > b.x &&
@@ -45,12 +53,16 @@ function draw() {
     context.save();
     context.translate(-cameraX, 0);
     for (const object of level.objects) {
-        if (object.type === "platform") context.fillStyle = "#60a5fa";
-        if (object.type === "spike") context.fillStyle = "#fb7185";
-        if (object.type === "spawn") context.fillStyle = "#a3e635";
-        if (object.type === "goal") context.fillStyle = "#facc15";
+        const defaultColors = {
+            platform: "#60a5fa",
+            spike: "#fb7185",
+            spawn: "#a3e635",
+            goal: "#facc15",
+        };
+        context.fillStyle = object.color || defaultColors[object.type] || "#ffffff";
         if (object.type === "platform") context.fillRect(object.x, object.y, object.width, object.height);
         if (object.type === "spike") {
+            context.fillStyle = shadeColor(object.color || "#fb7185");
             context.beginPath();
             context.moveTo(object.x, object.y + object.height);
             context.lineTo(object.x + object.width / 2, object.y);
@@ -69,7 +81,7 @@ function draw() {
 function update(delta) {
     if (!player || completed) return;
     const acceleration = 1800;
-    const maxSpeed = 300;
+    const maxSpeed = level.settings.move_speed ?? 300;
     const friction = 0.82;
     if (keys.has("ArrowLeft") || keys.has("KeyA")) player.vx -= acceleration * delta;
     if (keys.has("ArrowRight") || keys.has("KeyD")) player.vx += acceleration * delta;
@@ -115,7 +127,7 @@ function update(delta) {
         }
     }
 
-    player.x = Math.max(0, player.x);
+    player.x = Math.max(0, Math.min(player.x, Math.max(0, level.settings.width - player.width)));
     if (player.y > level.settings.height + 200) {
         status.textContent = "掉出關卡！點重新開始再試一次。";
         resetGame();
@@ -129,7 +141,7 @@ window.addEventListener("keydown", (event) => {
     if (["ArrowLeft", "ArrowRight", "ArrowUp", "Space"].includes(event.code)) event.preventDefault();
     if ((event.code === "ArrowUp" || event.code === "KeyW" || event.code === "Space") &&
         player?.grounded) {
-        player.vy = -520;
+        player.vy = -(level.settings.jump_strength ?? 520);
         player.grounded = false;
     }
     keys.add(event.code);
@@ -159,7 +171,7 @@ function bindTouchControls() {
     const jump = (event) => {
         event.preventDefault();
         if (player?.grounded && !completed) {
-            player.vy = -520;
+            player.vy = -(level.settings.jump_strength ?? 520);
             player.grounded = false;
         }
     };
