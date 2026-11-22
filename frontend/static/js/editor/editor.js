@@ -19,6 +19,20 @@ const zoomInButton = document.querySelector("#zoom-in");
 const zoomOutButton = document.querySelector("#zoom-out");
 const resetCameraButton = document.querySelector("#reset-camera");
 const zoomValue = document.querySelector("#zoom-value");
+const testButton = document.querySelector("#test-level");
+const exportButton = document.querySelector("#export-level");
+const importButton = document.querySelector("#import-level");
+const importFileInput = document.querySelector("#import-level-file");
+const propertyEmpty = document.querySelector("#property-empty");
+const propertyFields = document.querySelector("#property-fields");
+const propertyInputs = {
+    type: document.querySelector("#property-type"),
+    x: document.querySelector("#property-x"),
+    y: document.querySelector("#property-y"),
+    width: document.querySelector("#property-width"),
+    height: document.querySelector("#property-height"),
+};
+const applyPropertiesButton = document.querySelector("#apply-properties");
 
 const editorState = {
     level: createEmptyLevel(),
@@ -102,8 +116,8 @@ function createObject(type, x, y) {
     return {
         id: `${type}_${crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : Date.now().toString(36)}`,
         type,
-        x,
-        y,
+        x: Math.max(0, Math.min(x, editorState.level.settings.width - size.width)),
+        y: Math.max(0, Math.min(y, editorState.level.settings.height - size.height)),
         ...size,
     };
 }
@@ -131,6 +145,69 @@ function updateAndDraw() {
     editorState.activeTool = activeToolInput.value;
     if (zoomValue) zoomValue.textContent = `${Math.round(editorState.camera.zoom * 100)}%`;
     drawEditor(canvas, editorState);
+    updatePropertyPanel();
+}
+
+function getSelectedObject() {
+    if (editorState.selectedObjectIds.length !== 1) return null;
+    return editorState.level.objects.find(
+        (object) => object.id === editorState.selectedObjectIds[0]
+    ) || null;
+}
+
+function updatePropertyPanel() {
+    const object = getSelectedObject();
+    propertyEmpty.hidden = Boolean(object);
+    propertyFields.hidden = !object;
+    if (!object) return;
+    for (const key of ["type", "x", "y", "width", "height"]) {
+        propertyInputs[key].value = object[key];
+    }
+}
+
+function validateImportedLevel(level) {
+    if (!level || typeof level !== "object" || Array.isArray(level)) {
+        throw new Error("JSON 最外層必須是物件。");
+    }
+    if (!level.metadata || typeof level.metadata !== "object" || Array.isArray(level.metadata) ||
+        !level.settings || typeof level.settings !== "object" || Array.isArray(level.settings) ||
+        !Array.isArray(level.objects)) {
+        throw new Error("關卡必須包含 metadata、settings 與 objects。");
+    }
+    for (const key of ["width", "height", "tile_size", "gravity"]) {
+        if (!Number.isFinite(Number(level.settings[key]))) {
+            throw new Error(`設定值 ${key} 必須是有效數字。`);
+        }
+    }
+    if (Number(level.settings.width) < 320 || Number(level.settings.width) > 100000 ||
+        Number(level.settings.height) < 320 || Number(level.settings.height) > 20000 ||
+        Number(level.settings.tile_size) < 8 || Number(level.settings.tile_size) > 256 ||
+        Number(level.settings.gravity) < 0 || Number(level.settings.gravity) > 5000) {
+        throw new Error("關卡設定超出允許範圍。");
+    }
+    const ids = new Set();
+    for (const object of level.objects) {
+        if (!object || typeof object !== "object" ||
+            !["platform", "spike", "spawn", "goal"].includes(object.type)) {
+            throw new Error("物件資料或物件類型不正確。");
+        }
+        if (typeof object.id !== "string" || !object.id || ids.has(object.id)) {
+            throw new Error("每個物件都必須有不重複的 ID。");
+        }
+        ids.add(object.id);
+        for (const key of ["x", "y", "width", "height"]) {
+            if (!Number.isFinite(Number(object[key]))) {
+                throw new Error(`物件 ${object.id} 的 ${key} 不是有效數字。`);
+            }
+        }
+        if (Number(object.x) < 0 || Number(object.y) < 0 ||
+            Number(object.width) < 8 || Number(object.height) < 8 ||
+            Number(object.x) + Number(object.width) > Number(level.settings.width) ||
+            Number(object.y) + Number(object.height) > Number(level.settings.height)) {
+            throw new Error(`物件 ${object.id} 的位置或大小不合理，或超出關卡範圍。`);
+        }
+    }
+    return level;
 }
 
 function startPan(event) {
@@ -271,19 +348,27 @@ canvas.addEventListener("pointermove", (event) => {
             editorState.gridSize,
             editorState.snapToGrid
         );
-        object.x = Math.max(0, position.x);
-        object.y = Math.max(0, position.y);
+        object.x = Math.max(0, Math.min(
+            position.x, editorState.level.settings.width - object.width
+        ));
+        object.y = Math.max(0, Math.min(
+            position.y, editorState.level.settings.height - object.height
+        ));
         updateAndDraw();
         return;
     }
     if (object && drag.mode === "resize") {
         const original = drag.object;
         const handle = drag.handle;
-        const resizePoint = applySnapping(
+        const snappedPoint = applySnapping(
             point,
             editorState.gridSize,
             editorState.snapToGrid
         );
+        const resizePoint = {
+            x: Math.max(0, Math.min(snappedPoint.x, editorState.level.settings.width)),
+            y: Math.max(0, Math.min(snappedPoint.y, editorState.level.settings.height)),
+        };
         let left = original.x;
         let top = original.y;
         let right = original.x + original.width;
@@ -401,10 +486,83 @@ window.addEventListener("keydown", (event) => {
     if (event.key === "ArrowUp") position.y = Math.max(0, position.y - step);
     if (event.key === "ArrowDown") position.y += step;
     position = applySnapping(position, editorState.gridSize, editorState.snapToGrid);
-    object.x = position.x;
-    object.y = position.y;
+    object.x = Math.max(0, Math.min(
+        position.x, editorState.level.settings.width - object.width
+    ));
+    object.y = Math.max(0, Math.min(
+        position.y, editorState.level.settings.height - object.height
+    ));
     status.textContent = "已使用方向鍵微調物件位置。";
     updateAndDraw();
+});
+
+applyPropertiesButton.addEventListener("click", () => {
+    const object = getSelectedObject();
+    if (!object) return;
+    const values = {};
+    for (const key of ["x", "y", "width", "height"]) {
+        values[key] = Number(propertyInputs[key].value);
+        if (!Number.isFinite(values[key])) {
+            status.textContent = "物件屬性必須是有效數字。";
+            return;
+        }
+    }
+    if (values.x < 0 || values.y < 0 || values.width < MIN_OBJECT_SIZE ||
+        values.height < MIN_OBJECT_SIZE ||
+        values.x + values.width > editorState.level.settings.width ||
+        values.y + values.height > editorState.level.settings.height) {
+        status.textContent = "物件不可超出關卡範圍，寬高至少要 8。";
+        return;
+    }
+    recordChange();
+    Object.assign(object, values);
+    status.textContent = "已更新物件屬性。";
+    updateAndDraw();
+});
+
+exportButton.addEventListener("click", () => {
+    editorState.level.metadata.name = levelNameInput.value.trim() || "未命名關卡";
+    const blob = new Blob(
+        [JSON.stringify(editorState.level, null, 2)],
+        { type: "application/json" }
+    );
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${editorState.level.metadata.name.replace(/[\\\\/:*?"<>|]/g, "_")}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    status.textContent = "已匯出 JSON 關卡檔案。";
+});
+
+importButton.addEventListener("click", () => importFileInput.click());
+importFileInput.addEventListener("change", async () => {
+    const file = importFileInput.files?.[0];
+    if (!file) return;
+    try {
+        const imported = validateImportedLevel(JSON.parse(await file.text()));
+        recordChange();
+        editorState.level = imported;
+        levelNameInput.value = imported.metadata.name || "未命名關卡";
+        editorState.selectedObjectIds = [];
+        status.textContent = `已匯入關卡：${levelNameInput.value}`;
+        updateAndDraw();
+    } catch (error) {
+        status.textContent = `匯入失敗：${error.message}`;
+    } finally {
+        importFileInput.value = "";
+    }
+});
+
+testButton.addEventListener("click", () => {
+    editorState.level.metadata.name = levelNameInput.value.trim() || "未命名關卡";
+    try {
+        validateImportedLevel(editorState.level);
+        sessionStorage.setItem("parkour_test_level", JSON.stringify(editorState.level));
+        window.location.href = "/game?source=editor";
+    } catch (error) {
+        status.textContent = `無法測試：${error.message}`;
+    }
 });
 
 async function loadInitialLevel() {

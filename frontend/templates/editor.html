@@ -11,6 +11,10 @@
         <button id="undo" type="button">復原</button>
         <button id="redo" type="button">重做</button>
         <button id="save-level" type="button">儲存關卡</button>
+        <button id="test-level" type="button">測試目前關卡</button>
+        <button id="export-level" type="button">匯出 JSON</button>
+        <button id="import-level" type="button">匯入 JSON</button>
+        <input id="import-level-file" type="file" accept=".json,application/json" hidden>
         <button id="zoom-out" type="button" aria-label="縮小檢視">−</button>
         <span id="zoom-value">100%</span>
         <button id="zoom-in" type="button" aria-label="放大檢視">＋</button>
@@ -31,8 +35,22 @@
     <label>關卡名稱 <input id="level-name" type="text" value="未命名關卡"></label>
     <button id="delete-selected" type="button">刪除選取物件</button>
 </div>
-<div class="canvas-wrap editor-canvas-wrap">
-    <canvas id="editor-canvas" width="960" height="540"></canvas>
+<div class="editor-workspace">
+    <div class="canvas-wrap editor-canvas-wrap">
+        <canvas id="editor-canvas" width="960" height="540"></canvas>
+    </div>
+    <aside class="object-properties" aria-label="物件屬性">
+        <h2>物件屬性</h2>
+        <p id="property-empty">請先選取一個物件。</p>
+        <div id="property-fields" hidden>
+            <label>物件類型 <input id="property-type" type="text" readonly></label>
+            <label>X 位置 <input id="property-x" type="number" min="0" step="1"></label>
+            <label>Y 位置 <input id="property-y" type="number" min="0" step="1"></label>
+            <label>寬度 <input id="property-width" type="number" min="8" step="1"></label>
+            <label>高度 <input id="property-height" type="number" min="8" step="1"></label>
+            <button id="apply-properties" type="button">套用變更</button>
+        </div>
+    </aside>
 </div>
 <p class="hint" id="editor-status">拖曳物件可移動；選取工具下拖曳空白處可平移畫面；滾輪縮放，也可按住空白鍵、中鍵或右鍵拖曳平移。</p>
 {% endblock %}

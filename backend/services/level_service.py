@@ -1,14 +1,112 @@
 import json
+import math
 import re
 from pathlib import Path
 from uuid import uuid4
 
 SAFE_ID = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
+ALLOWED_OBJECT_TYPES = {"platform", "spike", "spawn", "goal"}
+
 
 def _level_folder(levels_dir):
     folder = Path(levels_dir) / "user"
     folder.mkdir(parents=True, exist_ok=True)
     return folder
+
+
+def _number(value, field, minimum=None, maximum=None):
+    if isinstance(value, bool):
+        raise ValueError(f"{field} 必須是數字。")
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{field} 必須是數字。")
+    if not math.isfinite(result):
+        raise ValueError(f"{field} 必須是有效數字。")
+    if minimum is not None and result < minimum:
+        raise ValueError(f"{field} 不可小於 {minimum}。")
+    if maximum is not None and result > maximum:
+        raise ValueError(f"{field} 不可大於 {maximum}。")
+    return result
+
+
+def validate_level(data):
+    if not isinstance(data, dict):
+        raise ValueError("關卡資料必須是 JSON 物件。")
+
+    metadata = data.get("metadata")
+    settings = data.get("settings")
+    objects = data.get("objects")
+    if not isinstance(metadata, dict) or not isinstance(settings, dict) or not isinstance(objects, list):
+        raise ValueError("關卡必須包含 metadata、settings 及 objects。")
+    if len(objects) > 5000:
+        raise ValueError("單一關卡最多只能有 5000 個物件。")
+
+    level_id = data.get("id") or uuid4().hex[:12]
+    if not isinstance(level_id, str) or not SAFE_ID.fullmatch(level_id):
+        raise ValueError("關卡 ID 格式不正確。")
+
+    width = int(_number(settings.get("width", 3200), "關卡寬度", 320, 100000))
+    height = int(_number(settings.get("height", 960), "關卡高度", 320, 20000))
+    tile_size = int(_number(settings.get("tile_size", 32), "格子大小", 8, 256))
+    gravity = _number(settings.get("gravity", 980), "重力", 0, 5000)
+
+    normalized_objects = []
+    seen_ids = set()
+    for index, item in enumerate(objects):
+        label = f"第 {index + 1} 個物件"
+        if not isinstance(item, dict):
+            raise ValueError(f"{label}資料格式不正確。")
+        object_id = item.get("id")
+        object_type = item.get("type")
+        if not isinstance(object_id, str) or not SAFE_ID.fullmatch(object_id):
+            raise ValueError(f"{label}缺少有效的物件 ID。")
+        if object_id in seen_ids:
+            raise ValueError(f"物件 ID 重複：{object_id}")
+        seen_ids.add(object_id)
+        if object_type not in ALLOWED_OBJECT_TYPES:
+            raise ValueError(f"{label}的類型不支援。")
+
+        x = _number(item.get("x"), f"{label} X 位置", 0, width)
+        y = _number(item.get("y"), f"{label} Y 位置", 0, height)
+        object_width = _number(item.get("width"), f"{label}寬度", 8, width)
+        object_height = _number(item.get("height"), f"{label}高度", 8, height)
+        if x + object_width > width or y + object_height > height:
+            raise ValueError(f"{label}超出關卡範圍。")
+
+        normalized_objects.append({
+            "id": object_id,
+            "type": object_type,
+            "x": x,
+            "y": y,
+            "width": object_width,
+            "height": object_height,
+        })
+
+    try:
+        version = int(data.get("version", 1))
+    except (TypeError, ValueError):
+        raise ValueError("關卡版本格式不正確。")
+    if version < 1 or version > 100:
+        raise ValueError("關卡版本必須介於 1 到 100。")
+
+    return {
+        "id": level_id,
+        "version": version,
+        "metadata": {
+            "name": str(metadata.get("name", "未命名關卡"))[:80],
+            "author": str(metadata.get("author", "Player"))[:40],
+            "description": str(metadata.get("description", ""))[:500],
+        },
+        "settings": {
+            "width": width,
+            "height": height,
+            "tile_size": tile_size,
+            "gravity": gravity,
+        },
+        "objects": normalized_objects,
+    }
+
 
 def list_levels(levels_dir):
     results = []
@@ -20,6 +118,8 @@ def list_levels(levels_dir):
             try:
                 data = json.loads(file_path.read_text(encoding="utf-8"))
                 metadata = data.get("metadata", {})
+                if not isinstance(metadata, dict):
+                    metadata = {}
                 results.append({
                     "id": file_path.stem,
                     "name": metadata.get("name", file_path.stem),
@@ -36,8 +136,9 @@ def list_levels(levels_dir):
             unique_results.append(level)
     return unique_results
 
+
 def load_level(levels_dir, level_id):
-    if not SAFE_ID.fullmatch(level_id):
+    if not isinstance(level_id, str) or not SAFE_ID.fullmatch(level_id):
         return None
     levels_path = Path(levels_dir)
     candidates = [
@@ -53,36 +154,10 @@ def load_level(levels_dir, level_id):
             continue
     return None
 
+
 def save_level(levels_dir, data):
-    metadata = data.get("metadata")
-    settings = data.get("settings")
-    objects = data.get("objects")
-
-    if not isinstance(metadata, dict) or not isinstance(settings, dict) or not isinstance(objects, list):
-        raise ValueError("關卡必須包含 metadata、settings 及 objects。")
-
-    level_id = data.get("id") or uuid4().hex[:12]
-    if not isinstance(level_id, str) or not SAFE_ID.fullmatch(level_id):
-        raise ValueError("關卡 ID 格式不正確。")
-
-    normalized = {
-        "id": level_id,
-        "version": int(data.get("version", 1)),
-        "metadata": {
-            "name": str(metadata.get("name", "未命名關卡"))[:80],
-            "author": str(metadata.get("author", "Player"))[:40],
-            "description": str(metadata.get("description", ""))[:500],
-        },
-        "settings": {
-            "width": max(320, min(int(settings.get("width", 3200)), 100000)),
-            "height": max(320, min(int(settings.get("height", 960)), 20000)),
-            "tile_size": max(8, min(int(settings.get("tile_size", 32)), 256)),
-            "gravity": max(0, min(float(settings.get("gravity", 980)), 5000)),
-        },
-        "objects": objects,
-    }
-
-    file_path = _level_folder(levels_dir) / f"{level_id}.json"
+    normalized = validate_level(data)
+    file_path = _level_folder(levels_dir) / f"{normalized['id']}.json"
     file_path.write_text(
         json.dumps(normalized, ensure_ascii=False, indent=2),
         encoding="utf-8",

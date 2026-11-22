@@ -4,6 +4,7 @@ const canvas = document.querySelector("#game-canvas");
 const context = canvas?.getContext("2d");
 const status = document.querySelector("#game-status");
 const restartButton = document.querySelector("#restart-game");
+const returnEditorButton = document.querySelector("#return-editor");
 
 const keys = new Set();
 let level = null;
@@ -136,6 +137,38 @@ window.addEventListener("keydown", (event) => {
 window.addEventListener("keyup", (event) => keys.delete(event.code));
 restartButton?.addEventListener("click", resetGame);
 
+function bindTouchControls() {
+    for (const button of document.querySelectorAll("[data-game-key]")) {
+        const key = button.dataset.gameKey;
+        const release = (event) => {
+            event.preventDefault();
+            keys.delete(key);
+        };
+        button.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            button.setPointerCapture?.(event.pointerId);
+            keys.add(key);
+        });
+        button.addEventListener("pointerup", release);
+        button.addEventListener("pointercancel", release);
+        button.addEventListener("lostpointercapture", () => keys.delete(key));
+        button.addEventListener("contextmenu", (event) => event.preventDefault());
+    }
+
+    const jumpButton = document.querySelector('[data-game-action="jump"]');
+    const jump = (event) => {
+        event.preventDefault();
+        if (player?.grounded && !completed) {
+            player.vy = -520;
+            player.grounded = false;
+        }
+    };
+    jumpButton?.addEventListener("pointerdown", jump);
+    jumpButton?.addEventListener("contextmenu", (event) => event.preventDefault());
+}
+
+bindTouchControls();
+
 function loop(now) {
     const delta = Math.min((now - lastTime) / 1000, 0.032);
     lastTime = now;
@@ -148,9 +181,23 @@ function loop(now) {
 
 async function initialize() {
     if (!context) return;
-    const levelId = new URLSearchParams(window.location.search).get("level") || "example_first";
+    const params = new URLSearchParams(window.location.search);
+    const isEditorTest = params.get("source") === "editor";
+    if (returnEditorButton) {
+        returnEditorButton.hidden = !isEditorTest;
+        returnEditorButton.addEventListener("click", () => {
+            window.location.href = "/editor";
+        });
+    }
     try {
-        level = await getLevel(levelId);
+        if (isEditorTest) {
+            const draft = sessionStorage.getItem("parkour_test_level");
+            if (!draft) throw new Error("找不到編輯器傳來的測試關卡，請回編輯器重新測試。");
+            level = JSON.parse(draft);
+        } else {
+            const levelId = params.get("level") || "example_first";
+            level = await getLevel(levelId);
+        }
         resetGame();
     } catch (error) {
         status.textContent = `載入失敗：${error.message}`;

@@ -10,3 +10,18 @@
 .editor-controls input, .editor-controls select, .toolbar input, .toolbar button { padding: 7px 9px; }
 .toolbar button, .editor-controls button { padding: 8px 12px; cursor: pointer; }
 #zoom-value { min-width: 48px; text-align: center; color: var(--muted); }
+
+
+.editor-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 210px; gap: 16px; align-items: start; }
+.editor-canvas-wrap { min-width: 0; }
+.object-properties { margin-top: 22px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--card, #172337); }
+.object-properties h2 { margin: 0 0 12px; font-size: 1.05rem; }
+.object-properties label { display: flex; flex-direction: column; gap: 5px; margin: 10px 0; color: var(--muted); font-size: .9rem; }
+.object-properties input { box-sizing: border-box; width: 100%; min-width: 0; padding: 7px; }
+.object-properties button { width: 100%; padding: 8px; cursor: pointer; }
+#property-empty { color: var(--muted); font-size: .9rem; }
+@media (max-width: 850px) {
+    .editor-workspace { grid-template-columns: 1fr; }
+    .object-properties { margin-top: 0; }
+    .toolbar { gap: 8px; }
+}
